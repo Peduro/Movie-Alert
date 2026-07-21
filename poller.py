@@ -90,12 +90,14 @@ def load_config():
 
     required = ["target_url", "telegram_bot_token", "telegram_chat_id"]
     detector = cfg.get("detector")
-    if detector in ("bms_date", "venue_date"):
+    if detector in ("bms_date", "venue_date", "show_time"):
         required.append("requested_date")
-    elif detector != "venue_date":
+    else:
         required.append("theatre")
     if detector == "venue_date" and not (cfg.get("venue_code") or cfg.get("venue_codes")):
         sys.exit("venue_date detector needs 'venue_code' or 'venue_codes'")
+    if detector == "show_time" and not cfg.get("show_time"):
+        sys.exit("show_time detector needs 'show_time'")    
     missing = [k for k in required if not cfg.get(k)]
     if missing:
         sys.exit(f"Missing required config: {', '.join(missing)}")
@@ -187,7 +189,26 @@ def is_available_bms_date(page_text, cfg):
 
     return top_date == requested and requested_count >= floor
 
+def is_available_show_time(page_text, cfg):
+    """
+    Detects when a specific showtime + screen attribute (e.g. "09:00 AM" on
+    the "RGB ATMOS" screen) gets added to an already-open date for a venue.
+    """
+    date = cfg["requested_date"]
+    codes = cfg.get("venue_codes") or [cfg["venue_code"]]
+    venue_present = any("/{}/{}".format(code, date) in page_text for code in codes)
+    if not venue_present:
+        return False
 
+    show_time = cfg["show_time"]
+    show_attribute = cfg.get("show_attribute")
+
+    if show_time not in page_text:
+        return False
+    if show_attribute and show_attribute not in page_text:
+        return False
+    return True
+    
 def is_available_venue_date(page_text, cfg):
     """
     Theatre-specific detector: is a given venue bookable on a given date?
@@ -208,6 +229,8 @@ def is_available_venue_date(page_text, cfg):
 
 def is_available(page_text, cfg):
     detector = cfg.get("detector")
+    if detector == "show_time":
+        return is_available_show_time(page_text, cfg)
     if detector == "venue_date":
         return is_available_venue_date(page_text, cfg)
     if detector == "bms_date":
@@ -268,7 +291,7 @@ def main():
     print(f"[{label}] available={available} (was {state.get('available')})")
 
     if available and not state.get("available"):
-        if cfg.get("detector") in ("bms_date", "venue_date"):
+        if cfg.get("detector") in ("bms_date", "venue_date", "show_time"):
             rd = cfg["requested_date"]
             pretty = f"{rd[6:8]}-{rd[4:6]}-{rd[0:4]}"
             venue = cfg.get("venue_label") or cfg.get("venue_code") or ""
