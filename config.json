@@ -1,9 +1,10 @@
 {
-  "detector": "venue_date",
-  "movie": "The Odyssey (IMAX 2D)",
-  "requested_date": "20260722",
-  "venue_code": "INPR",
-  "venue_label": "INOX: LUXE Phoenix Market City, Velachery",
-  "url_template": "https://in.bookmyshow.com/movies/chennai/the-odyssey/buytickets/ET00480917/{date}",
-  "min_references": 10
+  "detector": "show_time",
+  "movie": "Jana Nayagan",
+  "requested_date": "20260723",
+  "venue_code": "RSSC",
+  "venue_label": "Rohini Silver Screens: Koyambedu",
+  "show_time": "09:00 AM",
+  "show_attribute": "RGB ATMOS",
+  "url_template": "https://in.bookmyshow.com/movies/chennai/jana-nayagan/buytickets/ET00430817/{date}"
 }
