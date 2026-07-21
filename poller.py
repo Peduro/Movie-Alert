@@ -193,6 +193,11 @@ def is_available_show_time(page_text, cfg):
     """
     Detects when a specific showtime + screen attribute (e.g. "09:00 AM" on
     the "RGB ATMOS" screen) gets added to an already-open date for a venue.
+
+    Checks that show_time and show_attribute appear near each other (within
+    the same rendered show-entry block) rather than just anywhere on the
+    page -- otherwise unrelated occurrences of either string elsewhere can
+    cause a false positive.
     """
     date = cfg["requested_date"]
     codes = cfg.get("venue_codes") or [cfg["venue_code"]]
@@ -202,12 +207,15 @@ def is_available_show_time(page_text, cfg):
 
     show_time = cfg["show_time"]
     show_attribute = cfg.get("show_attribute")
+    window = cfg.get("proximity_window", 400)
 
-    if show_time not in page_text:
-        return False
-    if show_attribute and show_attribute not in page_text:
-        return False
-    return True
+    for m in re.finditer(re.escape(show_time), page_text):
+        start = max(0, m.start() - window)
+        end = min(len(page_text), m.end() + window)
+        chunk = page_text[start:end]
+        if not show_attribute or show_attribute in chunk:
+            return True
+    return False
     
 def is_available_venue_date(page_text, cfg):
     """
