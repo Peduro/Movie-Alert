@@ -225,47 +225,75 @@ def _find_showtimes_arrays(page_text, event_code):
     the page.
     """
     arrays = []
-    code_marker = '"EventCode":"{}"'.format(event_code)
-    pos = 0
-    while True:
-        idx = page_text.find(code_marker, pos)
-        if idx == -1:
-            break
 
-        st_idx = page_text.find('"ShowTimes":[', idx, idx + 2000)
-        if st_idx != -1:
-            bracket_start = st_idx + len('"ShowTimes":')
-            span = _extract_bracket_span(page_text, bracket_start)
-            if span:
-                snippet = page_text[span[0]:span[1]]
-                try:
-                    arrays.append(json.loads(snippet))
-                except json.JSONDecodeError:
-                    pass
+    pattern = re.compile(
+        rf'"EventCode"\s*:\s*"{re.escape(event_code)}"'
+    )
 
-        pos = idx + len(code_marker)
+    for match in pattern.finditer(page_text):
+        idx = match.start()
+
+        st_match = re.search(
+            r'"ShowTimes"\s*:\s*\[',
+            page_text[idx:idx + 5000]
+        )
+
+        if not st_match:
+            continue
+
+        showtimes_pos = idx + st_match.start()
+        bracket_start = page_text.find('[', showtimes_pos)
+        span = _extract_bracket_span(page_text, bracket_start)
+        if not span:
+            continue
+
+        snippet = page_text[span[0]:span[1]]
+
+        try:
+            showtimes = json.loads(snippet)
+            arrays.append(showtimes)
+            print(f"DEBUG: Loaded {len(showtimes)} shows")
+        except json.JSONDecodeError:
+            continue
+
+    # Temporary debug
+    print(f"DEBUG: EventCode={event_code}, arrays_found={len(arrays)}")
 
     return arrays
 
 def is_available_show_time(page_text, cfg):
     event_code = cfg.get("event_code")
     if not event_code:
+        print("DEBUG: event_code not configured")
         return False
 
     date = cfg["requested_date"]
     show_time = cfg["show_time"]
     show_attribute = cfg.get("show_attribute")
 
+    print(f"DEBUG: Looking for {date} | {show_time} | {show_attribute}")
+
     for showtimes in _find_showtimes_arrays(page_text, event_code):
         for show in showtimes:
+            print(
+                f"DEBUG: {show.get('ShowDateCode')} | "
+                f"{show.get('ShowTime')} | "
+                f"{show.get('Attributes')}"
+            )
+
             if show.get("ShowDateCode") != date:
                 continue
+
             if show.get("ShowTime") != show_time:
                 continue
+
             if show_attribute and show.get("Attributes") != show_attribute:
                 continue
+
+            print("DEBUG: MATCH FOUND")
             return True
 
+    print("DEBUG: No matching show found")
     return False
     
 def is_available_venue_date(page_text, cfg):
