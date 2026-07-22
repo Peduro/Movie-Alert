@@ -188,33 +188,84 @@ def is_available_bms_date(page_text, cfg):
     requested_count = counts.get(requested, 0)
 
     return top_date == requested and requested_count >= floor
+def _extract_bracket_span(text, start_idx, open_ch='[', close_ch=']'):
+    """
+    Given start_idx pointing at open_ch, return (start_idx, end_idx) spanning
+    the matching close_ch, using depth counting that's string-aware (so
+    brackets inside quoted strings don't throw off the count).
+    """
+    depth = 0
+    i = start_idx
+    in_string = False
+    escape = False
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == '\\':
+                escape = True
+            elif ch == '"':
+                in_string = False
+        else:
+            if ch == '"':
+                in_string = True
+            elif ch == open_ch:
+                depth += 1
+            elif ch == close_ch:
+                depth -= 1
+                if depth == 0:
+                    return start_idx, i + 1
+        i += 1
+    return None
+
+def _find_showtimes_arrays(page_text, event_code):
+    """
+    Find every ShowTimes array belonging to the given EventCode, anywhere on
+    the page.
+    """
+    arrays = []
+    code_marker = '"EventCode":"{}"'.format(event_code)
+    pos = 0
+    while True:
+        idx = page_text.find(code_marker, pos)
+        if idx == -1:
+            break
+
+        st_idx = page_text.find('"ShowTimes":[', idx, idx + 2000)
+        if st_idx != -1:
+            bracket_start = st_idx + len('"ShowTimes":')
+            span = _extract_bracket_span(page_text, bracket_start)
+            if span:
+                snippet = page_text[span[0]:span[1]]
+                try:
+                    arrays.append(json.loads(snippet))
+                except json.JSONDecodeError:
+                    pass
+
+        pos = idx + len(code_marker)
+
+    return arrays
 
 def is_available_show_time(page_text, cfg):
-    """
-    Detects when a specific showtime + screen attribute (e.g. "09:00 AM" on
-    the "RGB ATMOS" screen) gets added to an already-open date for a venue.
-
-    Checks that show_time and show_attribute appear near each other (within
-    the same rendered show-entry block) rather than just anywhere on the
-    page -- otherwise unrelated occurrences of either string elsewhere can
-    cause a false positive.
-    """
-    date = cfg["requested_date"]
-    codes = cfg.get("venue_codes") or [cfg["venue_code"]]
-    venue_present = any("/{}/{}".format(code, date) in page_text for code in codes)
-    if not venue_present:
+    event_code = cfg.get("event_code")
+    if not event_code:
         return False
 
+    date = cfg["requested_date"]
     show_time = cfg["show_time"]
     show_attribute = cfg.get("show_attribute")
-    window = cfg.get("proximity_window", 400)
 
-    for m in re.finditer(re.escape(show_time), page_text):
-        start = max(0, m.start() - window)
-        end = min(len(page_text), m.end() + window)
-        chunk = page_text[start:end]
-        if not show_attribute or show_attribute in chunk:
+    for showtimes in _find_showtimes_arrays(page_text, event_code):
+        for show in showtimes:
+            if show.get("ShowDateCode") != date:
+                continue
+            if show.get("ShowTime") != show_time:
+                continue
+            if show_attribute and show.get("Attributes") != show_attribute:
+                continue
             return True
+
     return False
     
 def is_available_venue_date(page_text, cfg):
