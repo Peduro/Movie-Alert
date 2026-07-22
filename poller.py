@@ -378,7 +378,11 @@ def main():
         # Transient network/blocking errors shouldn't crash the workflow.
         print(f"[{label}] fetch failed: {exc}")
         return 0
-
+        
+    print("========== PAGE START ==========")
+    print(page[:5000])
+    print("========== PAGE END ==========")
+    
     available = is_available(page, cfg)
     print(f"[{label}] available={available} (was {state.get('available')})")
 
