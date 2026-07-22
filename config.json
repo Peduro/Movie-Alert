@@ -7,5 +7,5 @@
   "event_code": "ET00430817",
   "show_time": "09:00 AM",
   "show_attribute": "RGB ATMOS",
-  "url_template": "https://in.bookmyshow.com/movies/chennai/jana-nayagan/buytickets/ET00430817/{date}"
+  "url_template": "https://in.bookmyshow.com/cinemas/COIM/rohini-silver-screens-koyambedu/buytickets/RSSC/{date}"
 }
