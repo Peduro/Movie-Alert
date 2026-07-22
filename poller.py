@@ -379,9 +379,11 @@ def main():
         print(f"[{label}] fetch failed: {exc}")
         return 0
         
-    print("========== PAGE START ==========")
-    print(page[:5000])
-    print("========== PAGE END ==========")
+
+    with open("debug_page.html", "w", encoding="utf-8") as f:
+        f.write(page)
+
+    print("DEBUG: Saved page to debug_page.html")
     
     available = is_available(page, cfg)
     print(f"[{label}] available={available} (was {state.get('available')})")
