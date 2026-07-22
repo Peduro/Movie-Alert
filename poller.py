@@ -225,6 +225,11 @@ def _find_showtimes_arrays(page_text, event_code):
     the page.
     """
     arrays = []
+    pos = page_text.find(event_code)
+    print(f"DEBUG: EventCode text position = {pos}")
+
+    if pos != -1:
+       print(page_text[max(0, pos-150):pos+300])
 
     pattern = re.compile(
         rf'"EventCode"\s*:\s*"{re.escape(event_code)}"'
