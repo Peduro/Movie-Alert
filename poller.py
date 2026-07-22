@@ -382,7 +382,10 @@ def main():
 
     with open("debug_page.html", "w", encoding="utf-8") as f:
         f.write(page)
-
+    print("DEBUG: EventCode key =", page.find('"EventCode"'))
+    print("DEBUG: ShowTimes key =", page.find('"ShowTimes"'))
+    print("DEBUG: ChildEvent key =", page.find('"ChildEvent"'))
+    print("DEBUG: __NEXT_DATA__ key =", page.find("__NEXT_DATA__"))
     print("DEBUG: Saved page to debug_page.html")
     
     available = is_available(page, cfg)
